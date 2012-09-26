@@ -103,11 +103,8 @@ class PostgresWriter(object):
                 else:
                     return default, 'timestamp without time zone'
             elif column['type'] == 'time':
-                default = " DEFAULT NOW()" if t(default) else None
-                if self.tz:
-                    return default, 'time with time zone'
-                else:
-                    return default, 'time without time zone'
+                default = " DEFAULT '00:00:00'::interval"
+                return default, 'interval'
             elif 'blob' in column['type'] or 'binary' in column['type']:
                 return default, 'bytea'
             elif column['type'] in ('tinytext', 'mediumtext', 'longtext', 'text'):
@@ -169,7 +166,12 @@ class PostgresWriter(object):
                 else:
                     row[index] = row[index].isoformat()
             elif isinstance(row[index], timedelta):
-                row[index] = datetime.utcfromtimestamp(row[index].total_seconds()).time().isoformat()
+                hours = row[index].days*24
+                sec_hours, remainder = divmod( row[index].seconds, 3600 )
+                hours += int(sec_hours)
+                minutes, seconds = divmod(remainder, 60)
+                #row[index] = datetime.fromtimestamp(row[index].total_seconds()).time().isoformat()
+                row[index] = "%s:%s:%s" % ( str(hours).zfill(2), str(int(minutes)).zfill(2), str(int(seconds)).zfill(2) )
             else:
                 row[index] = AsIs(row[index]).getquoted()
 
